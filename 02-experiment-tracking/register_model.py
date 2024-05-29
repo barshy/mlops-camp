@@ -2,7 +2,6 @@ import os
 import pickle
 import click
 import mlflow
-
 from mlflow.entities import ViewType
 from mlflow.tracking import MlflowClient
 from sklearn.ensemble import RandomForestRegressor
@@ -16,11 +15,9 @@ mlflow.set_tracking_uri("http://127.0.0.1:5000")
 mlflow.set_experiment(EXPERIMENT_NAME)
 mlflow.sklearn.autolog()
 
-
 def load_pickle(filename):
     with open(filename, "rb") as f_in:
         return pickle.load(f_in)
-
 
 def train_and_log_model(data_path, params):
     X_train, y_train = load_pickle(os.path.join(data_path, "train.pkl"))
@@ -41,17 +38,11 @@ def train_and_log_model(data_path, params):
         test_rmse = mean_squared_error(y_test, rf.predict(X_test), squared=False)
         mlflow.log_metric("test_rmse", test_rmse)
 
-
 @click.command()
 @click.option(
     "--data_path",
     default="/home/mrblack/Projects/mlops-camp/data/02",
     help="Location where the processed NYC taxi trip data was saved"
-)
-@click.option(
-    "--output_path",
-    default="~/Projects/mlops-camp/data/02",
-    help="Location where the model and artifacts will be saved"
 )
 @click.option(
     "--top_n",
@@ -60,7 +51,6 @@ def train_and_log_model(data_path, params):
     help="Number of top models that need to be evaluated to decide which one to promote"
 )
 def run_register_model(data_path: str, top_n: int):
-
     client = MlflowClient()
 
     # Retrieve the top_n model runs and log the models
@@ -71,6 +61,7 @@ def run_register_model(data_path: str, top_n: int):
         max_results=top_n,
         order_by=["metrics.rmse ASC"]
     )
+
     for run in runs:
         train_and_log_model(data_path=data_path, params=run.data.params)
 
@@ -85,9 +76,7 @@ def run_register_model(data_path: str, top_n: int):
 
     # Register the best model
     model_uri = f"runs:/{best_run.info.run_id}/model"
-    mlflow.register_model(model_uri, "Best_Random_Forest_Model")
-    # mlflow.register_model( ... )
-
+    mlflow.register_model(model_uri=model_uri, name="nyc-taxi-trip-duration")
 
 if __name__ == '__main__':
     run_register_model()
